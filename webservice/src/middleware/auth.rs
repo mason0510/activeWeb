@@ -1,6 +1,6 @@
 use std::future::{ready, Ready};
 
-use actix_web::{dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform}, Error, error};
+use actix_web::{dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform}, Error, error, HttpMessage};
 use actix_web::http::header::HeaderValue;
 use futures::future::{LocalBoxFuture, ok};
 
@@ -46,17 +46,37 @@ impl<S, B> Service<ServiceRequest> for Middleware<S>
 
     forward_ready!(service);
 
-    fn call(&self, req: ServiceRequest) -> Self::Future {
-        println!("Hi from start. You requested: {}", req.path());
+    fn call(&self, mut req: ServiceRequest) -> Self::Future {
+        let mut token =HeaderValue::from_str("").unwrap();
+        //req 获取token
+        {
+            println!("Hi from start. You requested: {}", req.path());
+            let x=req.headers().get("Authorization");
+            match x{
+                Some(x)=>{
+                    token=x.clone();
+                }
+                None=>{
+                    println!("no token");
+                }
+            }
+            // token=x.clone();
+        }
+        //token验证
+        //req.head_mut().insert("Authorization", HeaderValue::from_static("Bearer 12345678"));
+        //token解析
         let fut = self.service.call(req);
+        //获取request的header中的token
+        if token.len()>0{
         Box::pin(async move {
-            // if req.path().to_string()=="/login" ||token.len()>0{
                 let res = fut.await?;
                 println!("Hi from response");
                 Ok(res)
-            // }else {
-            //     Err(error::ErrorUnauthorized("err"))
-            // }
         })
+        }else {
+            Box::pin(async move {
+                Err(error::ErrorUnauthorized("err"))
+            })
+        }
     }
 }

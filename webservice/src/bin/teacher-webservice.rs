@@ -41,7 +41,6 @@ async fn main() -> io::Result<()>{
     let pool = PgPoolOptions::new().max_connections(5).connect(&database_url).await
         .unwrap();
 
-
     let shared_data=web::Data::new(AppState {
         health_check_response: "OK".to_string(),
         visit_count: Mutex::new(0),
